@@ -3,12 +3,17 @@ import { Player } from "./Models/Player.js";
 import { TeamBuilder } from "./Models/TeamBuilder.js";
 
 const rosterList = document.querySelector("#rosterList");
+
 const btnBuild = document.querySelector("#btnBuild");
 const btnSavePlyr = document.querySelector("#btnSavePlayer");
 const selectedCountEl = document.querySelector("#selectedCount");
 const buildHint = document.querySelector("#buildHint");
 const ratingInput = document.querySelector("#rngRating");
 const ratingOutput = document.querySelector("#ratingValue");
+const playerForm = document.querySelector("#playerForm");
+const nameInput = document.querySelector("#txtName");
+const selectPosition = document.querySelector("#selPosition");
+
 
 
 const POSITION_LABELS = { GK: "KL", DEF: "DF", MID: "OS", FWD: "FV" };
@@ -24,7 +29,9 @@ let players = await loadPlayers();
 function runEvents() {
     document.addEventListener("DOMContentLoaded", showRosterUI);
     rosterList.addEventListener("change", updateSelectionUI);
+    rosterList.addEventListener("click", removePlayer);
     ratingInput.addEventListener("input", changeRating);
+    playerForm.addEventListener("submit", addPlayer);
 }
 
 
@@ -34,43 +41,53 @@ function runEvents() {
 //preventDefault ile sayfa yenilemesinin önüne gececeğiz
 
 
-function changeRating(e) {
-    //output html elementinin value özelliği textContent ile aynı şey.
-    ratingOutput.value = e.target.value;
-}
+//Oyuncu Silme Kısmı UI VE STORAGE
 
-
-
-function updateSelectionUI() {
-    //işaretli checkbox sayısı
-    const selectedCount = rosterList.querySelectorAll("input:checked").length;
-    
-    //sayaç: "9 / 12 seçildi"
-    selectedCountEl.innerHTML = `<strong>${selectedCount}</strong> / ${MATCH_SIZE} seçildi`;
-    selectedCountEl.classList.toggle("is-ready", selectedCount === MATCH_SIZE);
-
-    //buton: sadece tam 12'de aktif
-    btnBuild.disabled = selectedCount !== MATCH_SIZE;
-
-    //ipucu yazısı
-    if (selectedCount < MATCH_SIZE) {
-        buildHint.textContent = `Takım kurmak için ${MATCH_SIZE - selectedCount} oyuncu daha seç.`;
-    } else if (selectedCount > MATCH_SIZE) {
-        buildHint.textContent = `${selectedCount - MATCH_SIZE} oyuncu fazla. Bugün gelmeyenlerin işaretini kaldır.`;
-    } else {
-        buildHint.textContent = "";   //boşken CSS gizler (.hint:empty)
+function removePlayer(e) {
+    const deleteButton = e.target.closest(".btn-delete");
+    if (deleteButton) {
+        const rosterLi = deleteButton.closest(".roster-item");
+        //Burada Storage'den sileceğiz bize value değer lazım bunu da rosterLi'teki id alarak yapalım
+        removePlayerStorage(Number(rosterLi.dataset.id));
+        rosterLi.remove();
+        updateSelectionUI();
     }
 }
+function removePlayerStorage(playerId) {
+    const index = players.findIndex(function(player) {
+        return player.id === playerId;
+    });
 
-function showRosterUI() {
-    rosterList.innerHTML = ""; //HTML'deki örnek oyuncuları temizle
+    if(index != -1){
+        players.splice(index,1)
+        savePlayers(players);
+    }
 
-    players.forEach(player => addRosterHTMLElement(player));
-    updateSelectionUI();   //başlangıç durumu: "0 / 12 seçildi"
+}
+// Oyuncu Ekleme Kısmı UI / STORAGE /
+function addPlayer(e){
+    
+    e.preventDefault(); //Submit farklı bir sayfaya yönlendirmesin diye yaptık. En başa aldık, aşağıda hata olsa bile sayfa yenilenmesin
+    const inputText = nameInput.value.trim();
+    const playerPosition= selectPosition.value;
+    const playerRating = Number(ratingInput.value); 
+    
+    if (inputText===""){
+        alert("Oyuncu bilgilerini eksiksiz doldurun");
+    }
+    else{
+        const newPlayer = new Player(Date.now(),inputText,playerPosition,playerRating);
+        //Storage ekleme
+        players.push(newPlayer);
+        savePlayers(players);
+        //UI Ekleme
+        addRosterHTMLElement(newPlayer);
+        //Seçili kişilerin güncellenmesi
+        updateSelectionUI();
+        nameInput.value="";
+    }
     
 }
-
-
 
 function addRosterHTMLElement(player) {
 //     <li class="roster-item" data-id="3">
@@ -128,3 +145,42 @@ function addRosterHTMLElement(player) {
     rosterList.appendChild(li);
 
 }
+
+//Gösterim Kısmı UI
+function updateSelectionUI() {
+    //işaretli checkbox sayısı
+    const selectedCount = rosterList.querySelectorAll("input:checked").length;
+    
+    //sayaç: "9 / 12 seçildi"
+    selectedCountEl.innerHTML = `<strong>${selectedCount}</strong> / ${MATCH_SIZE} seçildi`;
+    selectedCountEl.classList.toggle("is-ready", selectedCount === MATCH_SIZE);
+
+    //buton: sadece tam 12'de aktif
+    btnBuild.disabled = selectedCount !== MATCH_SIZE;
+
+    //ipucu yazısı
+    if (selectedCount < MATCH_SIZE) {
+        buildHint.textContent = `Takım kurmak için ${MATCH_SIZE - selectedCount} oyuncu daha seç.`;
+    } else if (selectedCount > MATCH_SIZE) {
+        buildHint.textContent = `${selectedCount - MATCH_SIZE} oyuncu fazla. Bugün gelmeyenlerin işaretini kaldır.`;
+    } else {
+        buildHint.textContent = "";   //boşken CSS gizler (.hint:empty)
+    }
+}
+
+function showRosterUI() {
+    rosterList.innerHTML = ""; //HTML'deki örnek oyuncuları temizle
+    players.forEach(player => addRosterHTMLElement(player));
+    updateSelectionUI();   //başlangıç durumu: "0 / 12 seçildi"
+    
+}
+
+
+
+//Yardımcı Fonksiyonlar
+function changeRating(e) {
+    //output html elementinin value özelliği textContent ile aynı şey.
+    ratingOutput.value = e.target.value;
+}
+
+
