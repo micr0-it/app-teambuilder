@@ -23,7 +23,8 @@ runEvents();
 
 let players = await loadPlayers();
 
-let selectedPlayerId; //edit fonksiyon kontrolü için lazım
+let selectedPlayerId; //edit fonksiyon kontrolü için lazım,
+let matchPlayers = [];
 
 
 function runEvents() {
@@ -33,7 +34,35 @@ function runEvents() {
     rosterList.addEventListener("click", editPlayer);
     ratingInput.addEventListener("input", changeRating);
     playerForm.addEventListener("submit", addPlayer);
+    btnBuild.addEventListener("click", createTeams);
 }
+
+
+function createTeams() {
+    const checkedBox = rosterList.querySelectorAll("input:checked");
+    checkedBox.forEach(player => {
+        console.log(player);
+    });
+    const checkedBoxes  = [...checkedBox];
+    //işaretli checkbox'ları oyuncu nesnelerine çevir
+    
+    /**
+     * map her checkbox için fonksiyonu bir kere çalıştırır 
+     * ve fonksiyonun return ettiği değerlerden yeni bir dizi oluşturur. 
+     * 12 checkbox girer, 12 oyuncu çıkar.
+     * return’ü unutursan dizi 12 tane undefined ile dolar.
+     */
+    matchPlayers = checkedBoxes.map(function (checkbox) {
+    const rosterLi = checkbox.closest(".roster-item");               //1) satırına çık
+    const playerId = Number(rosterLi.dataset.id);                    //2) id'yi sayı olarak oku
+    return players.find(player => player.id === playerId);           //3) oyuncuyu bul ve döndür
+});
+
+    console.log(matchPlayers[0]); 
+    
+}
+
+
 
 
 
