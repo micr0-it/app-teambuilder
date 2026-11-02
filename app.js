@@ -25,8 +25,7 @@ let players = await loadPlayers();
 
 let selectedPlayerId; //edit fonksiyon kontrolü için lazım,
 let matchPlayers = [];
-
-
+let snakeTeam1, snakeTeam2, bestTeam1, bestTeam2;
 function runEvents() {
     document.addEventListener("DOMContentLoaded", showRosterUI);
     rosterList.addEventListener("change", updateSelectionUI);
@@ -40,9 +39,7 @@ function runEvents() {
 
 function createTeams() {
     const checkedBox = rosterList.querySelectorAll("input:checked");
-    checkedBox.forEach(player => {
-        console.log(player);
-    });
+    
     const checkedBoxes  = [...checkedBox];
     //işaretli checkbox'ları oyuncu nesnelerine çevir
     
@@ -59,10 +56,25 @@ function createTeams() {
 });
 
     console.log(matchPlayers[0]); 
+    const goalkeepers = matchPlayers.filter((player) => player.position === "GK");
+    console.log(goalkeepers);
+    
+    if (goalkeepers.length === 2) {
+        buildTeams(goalkeepers,matchPlayers);
+    }
     
 }
 
-
+function buildTeams(goalkeepers) {
+    const teambuilder = new TeamBuilder(matchPlayers,goalkeepers); //jste ctora verılen parametre sıraları onemlı
+    const best = teambuilder.buildBestOfAll();
+    const snake = teambuilder.buildSnakeDraft();
+    [snakeTeam1,snakeTeam2]= snake;
+    [bestTeam1,bestTeam2]= best;
+    console.log([snakeTeam1,snakeTeam2]);
+    console.log([bestTeam1,bestTeam2]);
+    
+}
 
 
 
