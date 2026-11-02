@@ -26,9 +26,14 @@ function getCombinations(arr, k) {
 }
 
 export class TeamBuilder {
-    constructor(players, formation = { GK: 1, DEF: 2, MID: 2, FWD: 1 }) {
-        this.players = players;     //maça gelen oyuncular (Player nesneleri)
-        this.formation = formation; //gönderilmezse varsayılan 1-2-2-1 kullanılır
+    //players     : maça gelen oyuncular (Player nesneleri)
+    //goalkeepers : bu maçta kalede oynayacak 2 oyuncu (Player nesneleri)
+    //              verilmezse (null) mevkisi GK olanlar kullanılır
+    //formation   : gönderilmezse varsayılan 1-2-2-1
+    constructor(players, goalkeepers = null, formation = { GK: 1, DEF: 2, MID: 2, FWD: 1 }) {
+        this.players = players;
+        this.goalkeepers = goalkeepers;
+        this.formation = formation;
     }
 
     //bir takımdaki oyuncu sayısı: dizilimden hesaplanır (1+2+2+1 = 6)
@@ -37,25 +42,37 @@ export class TeamBuilder {
         return Object.values(this.formation).reduce((a, b) => a + b, 0);
     }
 
-    //iki algoritmanın ortak kontrolü: sorun yoksa kalecileri (iyisi önde) döndürür
+    //iki algoritmanın ortak kontrolü: sorun yoksa bu maçın kalecilerini (iyisi önde) döndürür
     checkPlayers() {
         if (this.players.length !== this.teamSize * 2) {
             throw new Error(`${this.teamSize * 2} oyuncu gerekli, gelen: ${this.players.length}`);
         }
 
-        const goalkeepers = this.players
-            .filter(p => p.position === "GK")
-            .sort((a, b) => b.rating - a.rating);
+        //kaleciler dışarıdan verildiyse onlar, verilmediyse mevkisi GK olanlar
+        //?? (nullish): soldaki null/undefined ise sağdakini kullan
+        const goalkeepers = this.goalkeepers ?? this.players.filter(p => p.position === "GK");
 
         if (goalkeepers.length !== 2) {
             throw new Error(`Tam 2 kaleci gerekli, gelen: ${goalkeepers.length}`);
         }
 
-        return goalkeepers;
+        //every: dizideki HER eleman koşulu sağlıyorsa true
+        if (!goalkeepers.every(gk => this.players.includes(gk))) {
+            throw new Error("Kaleciler maç kadrosundan seçilmeli");
+        }
+
+        //[...goalkeepers]: kopyasını sırala, dışarıdan gelen dizinin sırası bozulmasın
+        return [...goalkeepers].sort((a, b) => b.rating - a.rating);
+    }
+
+    //saha oyuncuları: kaleye seçilmeyen HERKES (sahada oynayan kaleciler dahil)
+    getOutfield(goalkeepers) {
+        return this.players.filter(p => !goalkeepers.includes(p));
     }
 
     //oyuncuları dizilime en az mevki dışı olacak şekilde yerleştirir
-    assignSlots(players, teamName) {
+    //goalkeeper: verilirse önce o oyuncu kaleye konur (mevkisi ne olursa olsun)
+    assignSlots(players, teamName, goalkeeper = null) {
         const team = new Team(teamName);
 
         //1) boş yerleri listeye çevir: ["GK", "DEF", "DEF", "MID", "MID", "FWD"]
@@ -68,20 +85,29 @@ export class TeamBuilder {
             }
         });
 
-        //2) birinci tur: herkes kendi mevkisinde yer varsa oraya
+        //2) kaleci belliyse önce onu kaleye koy, o yeri listeden çıkar
+        //   kaleye geçen bir defansçı (DEF -> GK) outOfPositionCount'ta kendiliğinden mevki dışı sayılır
+        let others = players;
+        if (goalkeeper) {
+            team.addPlayer(goalkeeper, "GK");
+            emptySlots.splice(emptySlots.indexOf("GK"), 1);
+            others = players.filter(p => p !== goalkeeper);
+        }
+
+        //3) birinci tur: herkes kendi mevkisinde yer varsa oraya
         const leftovers = [];   //kendi mevkisinde yer bulamayanlar
-        players.forEach(function (player) {
+        others.forEach(function (player) {
             const index = emptySlots.indexOf(player.position);   //kendi mevkimde boş yer var mı?
 
             if (index !== -1) {
                 team.addPlayer(player, player.position);   //kendi yerinde oynuyor
                 emptySlots.splice(index, 1);               //o yer artık dolu, listeden çıkar
             } else {
-                leftovers.push(player);                    //yer yok, kenara ayır
+                leftovers.push(player);                    //yer yok, kenara ayır (sahadaki kaleci de buraya düşer)
             }
         });
 
-        //3) ikinci tur: dışarıda kalanlar boş kalan yerlere (mevki dışı)
+        //4) ikinci tur: dışarıda kalanlar boş kalan yerlere (mevki dışı)
         //leftovers ve emptySlots her zaman aynı uzunlukta: i. oyuncu i. boş yere
         leftovers.forEach(function (player, index) {
             team.addPlayer(player, emptySlots[index]);
@@ -94,6 +120,7 @@ export class TeamBuilder {
     //her oyuncuyu o an toplam puanı düşük olan takıma verir. Hızlı ama en iyiyi garanti etmez.
     buildSnakeDraft() {
         const goalkeepers = this.checkPlayers();
+        const outfield = this.getOutfield(goalkeepers);
         const teamSize = this.teamSize;
 
         //grupların o anki toplam puanı (gruplar henüz Team değil, düz dizi)
@@ -103,32 +130,39 @@ export class TeamBuilder {
         const groupA = [goalkeepers[0]];
         const groupB = [goalkeepers[1]];
 
-        //2-3) saha oyuncularını mevki mevki dağıt
+        //bir oyuncuyu doğru gruba veren kural (aşağıda iki yerde kullanılıyor)
+        const give = (player) => {
+            if (groupA.length >= teamSize) {
+                groupB.push(player);                //A doldu
+            } else if (groupB.length >= teamSize) {
+                groupA.push(player);                //B doldu
+            } else if (sum(groupA) <= sum(groupB)) {
+                groupA.push(player);                //A zayıf (ya da eşit) → A'ya
+            } else {
+                groupB.push(player);                //B zayıf → B'ye
+            }
+        };
+
+        //2) saha oyuncularını mevki mevki dağıt
         //mevkiler dizilimden alınıyor: ["DEF", "MID", "FWD"]
         const outfieldPositions = Object.keys(this.formation).filter(pos => pos !== "GK");
 
-        //arrow function: içeride this.players'a erişebilmek için
         outfieldPositions.forEach((position) => {
-            const sameRole = this.players
+            outfield
                 .filter(p => p.position === position)
-                .sort((a, b) => b.rating - a.rating);   //büyükten küçüğe
-
-            sameRole.forEach((player) => {
-                if (groupA.length >= teamSize) {
-                    groupB.push(player);                //A doldu
-                } else if (groupB.length >= teamSize) {
-                    groupA.push(player);                //B doldu
-                } else if (sum(groupA) <= sum(groupB)) {
-                    groupA.push(player);                //A zayıf (ya da eşit) → A'ya
-                } else {
-                    groupB.push(player);                //B zayıf → B'ye
-                }
-            });
+                .sort((a, b) => b.rating - a.rating)   //büyükten küçüğe
+                .forEach(give);
         });
 
-        //4) grupları takıma çevir
-        const teamA = this.assignSlots(groupA, "A Takımı");
-        const teamB = this.assignSlots(groupB, "B Takımı");
+        //3) hiçbir mevki grubuna girmeyenler (sahada oynayan kaleciler) en sona
+        outfield
+            .filter(p => !outfieldPositions.includes(p.position))
+            .sort((a, b) => b.rating - a.rating)
+            .forEach(give);
+
+        //4) grupları takıma çevir (kaleciyi de söyleyerek)
+        const teamA = this.assignSlots(groupA, "A Takımı", goalkeepers[0]);
+        const teamB = this.assignSlots(groupB, "B Takımı", goalkeepers[1]);
         return [teamA, teamB];
     }
 
@@ -136,7 +170,7 @@ export class TeamBuilder {
     //10 saha oyuncusunu 5'e 5 bölmenin 252 yolunu dener. Her zaman en iyiyi bulur.
     buildBestOfAll() {
         const goalkeepers = this.checkPlayers();
-        const outfield = this.players.filter(p => p.position !== "GK");
+        const outfield = this.getOutfield(goalkeepers);
 
         let bestScore = Infinity;   //"sonsuz": ilk denenen her bölünme bundan iyi olur
         let bestTeams = null;
@@ -148,8 +182,8 @@ export class TeamBuilder {
             const rest = outfield.filter(p => !chosen.includes(p));
 
             //...chosen (spread): diziyi açar -> [kaleci, oyuncu1, oyuncu2, ...] tek dizi olur
-            const teamA = this.assignSlots([goalkeepers[0], ...chosen], "A Takımı");
-            const teamB = this.assignSlots([goalkeepers[1], ...rest], "B Takımı");
+            const teamA = this.assignSlots([goalkeepers[0], ...chosen], "A Takımı", goalkeepers[0]);
+            const teamB = this.assignSlots([goalkeepers[1], ...rest], "B Takımı", goalkeepers[1]);
             const currentScore = this.score(teamA, teamB);
 
             //şimdiye kadarkilerden daha iyiyse en iyi olarak sakla
