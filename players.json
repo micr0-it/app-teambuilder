@@ -1,0 +1,18 @@
+[
+  { "id": 1,  "name": "Tayfun",   "position": "GK",  "rating": 7 },
+  { "id": 2,  "name": "Burak",  "position": "GK",  "rating": 5 },
+  { "id": 3,  "name": "Tolga",  "position": "GK",  "rating": 6 },
+  { "id": 4,  "name": "Can",    "position": "DEF", "rating": 8 },
+  { "id": 5,  "name": "Serkan", "position": "DEF", "rating": 6 },
+  { "id": 6,  "name": "Onur",   "position": "DEF", "rating": 5 },
+  { "id": 7,  "name": "Kaan",   "position": "DEF", "rating": 7 },
+  { "id": 8,  "name": "Mert",   "position": "DEF", "rating": 4 },
+  { "id": 9,  "name": "Arda",   "position": "MID", "rating": 9 },
+  { "id": 10, "name": "Barış",  "position": "MID", "rating": 6 },
+  { "id": 11, "name": "Deniz",  "position": "MID", "rating": 7 },
+  { "id": 12, "name": "Yusuf",  "position": "MID", "rating": 5 },
+  { "id": 13, "name": "Ozan",   "position": "MID", "rating": 8 },
+  { "id": 14, "name": "Cenk",   "position": "FWD", "rating": 9 },
+  { "id": 15, "name": "Hakan",  "position": "FWD", "rating": 6 },
+  { "id": 16, "name": "Efe",    "position": "FWD", "rating": 7 }
+]

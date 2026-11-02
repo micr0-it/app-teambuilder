@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kim Kimle?</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header class="top">
+        <h1 class="title">Kim Kimle?</h1>
+        <p class="subtitle">Bugün gelenleri seç, dengeli iki takım kuralım.</p>
+    </header>
+
+    <main class="app">
+
+        <!-- ============================================================
+             1. ADIM: KADRO
+             ============================================================ -->
+        <section class="panel roster" aria-labelledby="rosterTitle">
+            <div class="panel-head">
+                <h2 class="panel-title" id="rosterTitle"><span class="step">1</span> Bugün kim geliyor?</h2>
+                <!-- 12 olunca is-ready ekle (yeşil olur) -->
+                <p class="counter" id="selectedCount"><strong>9</strong> / 12 seçildi</p>
+            </div>
+
+            <!-- Oyuncu listesi
+                 Her li: data-id. İşaretlenince checkbox checked olur, CSS kendisi vurgular.
+                 Mevki rozeti: .pos[data-pos="GK|DEF|MID|FWD"] -->
+            <ul class="roster-list" id="rosterList">
+                <li class="roster-item" data-id="1">
+                    <label class="pick">
+                        <input type="checkbox" checked>
+                        <span class="pos" data-pos="GK">KL</span>
+                        <span class="pick-name">Tayfun</span>
+                        <span class="pick-rating">7</span>
+                    </label>
+                    <button type="button" class="icon-btn btn-edit" aria-label="Tayfun'yi düzenle"><i class="fa-solid fa-pen"></i></button>
+                    <button type="button" class="icon-btn btn-delete" aria-label="Tayfun'yi sil"><i class="fa-solid fa-trash-can"></i></button>
+                </li>
+                <li class="roster-item" data-id="3">
+                    <label class="pick">
+                        <input type="checkbox" checked>
+                        <span class="pos" data-pos="GK">KL</span>
+                        <span class="pick-name">Tolga</span>
+                        <span class="pick-rating">6</span>
+                    </label>
+                    <button type="button" class="icon-btn btn-edit" aria-label="Tolga'yı düzenle"><i class="fa-solid fa-pen"></i></button>
+                    <button type="button" class="icon-btn btn-delete" aria-label="Tolga'yı sil"><i class="fa-solid fa-trash-can"></i></button>
+                </li>
+                <li class="roster-item" data-id="4">
+                    <label class="pick">
+                        <input type="checkbox" checked>
+                        <span class="pos" data-pos="DEF">DF</span>
+                        <span class="pick-name">Can</span>
+                        <span class="pick-rating">8</span>
+                    </label>
+                    <button type="button" class="icon-btn btn-edit" aria-label="Can'ı düzenle"><i class="fa-solid fa-pen"></i></button>
+                    <button type="button" class="icon-btn btn-delete" aria-label="Can'ı sil"><i class="fa-solid fa-trash-can"></i></button>
+                </li>
+                <li class="roster-item" data-id="8">
+                    <label class="pick">
+                        <input type="checkbox">
+                        <span class="pos" data-pos="DEF">DF</span>
+                        <span class="pick-name">Mert</span>
+                        <span class="pick-rating">4</span>
+                    </label>
+                    <button type="button" class="icon-btn btn-edit" aria-label="Mert'i düzenle"><i class="fa-solid fa-pen"></i></button>
+                    <button type="button" class="icon-btn btn-delete" aria-label="Mert'i sil"><i class="fa-solid fa-trash-can"></i></button>
+                </li>
+                <li class="roster-item" data-id="9">
+                    <label class="pick">
+                        <input type="checkbox" checked>
+                        <span class="pos" data-pos="MID">OS</span>
+                        <span class="pick-name">Arda</span>
+                        <span class="pick-rating">9</span>
+                    </label>
+                    <button type="button" class="icon-btn btn-edit" aria-label="Arda'yı düzenle"><i class="fa-solid fa-pen"></i></button>
+                    <button type="button" class="icon-btn btn-delete" aria-label="Arda'yı sil"><i class="fa-solid fa-trash-can"></i></button>
+                </li>
+                <li class="roster-item" data-id="12">
+                    <label class="pick">
+                        <input type="checkbox">
+                        <span class="pos" data-pos="MID">OS</span>
+                        <span class="pick-name">Yusuf</span>
+                        <span class="pick-rating">5</span>
+                    </label>
+                    <button type="button" class="icon-btn btn-edit" aria-label="Yusuf'u düzenle"><i class="fa-solid fa-pen"></i></button>
+                    <button type="button" class="icon-btn btn-delete" aria-label="Yusuf'u sil"><i class="fa-solid fa-trash-can"></i></button>
+                </li>
+                <li class="roster-item" data-id="14">
+                    <label class="pick">
+                        <input type="checkbox" checked>
+                        <span class="pos" data-pos="FWD">FV</span>
+                        <span class="pick-name">Cenk</span>
+                        <span class="pick-rating">9</span>
+                    </label>
+                    <button type="button" class="icon-btn btn-edit" aria-label="Cenk'i düzenle"><i class="fa-solid fa-pen"></i></button>
+                    <button type="button" class="icon-btn btn-delete" aria-label="Cenk'i sil"><i class="fa-solid fa-trash-can"></i></button>
+                </li>
+            </ul>
+
+            <!-- Oyuncu ekleme / düzenleme formu
+                 Düzenlerken: forma is-editing ekle, butonun yazısı "Kaydet" olur -->
+            <form class="add-form" id="playerForm" autocomplete="off">
+                <h3 class="form-title">Kadroya oyuncu ekle</h3>
+                <div class="form-row">
+                    <label class="field field-name">
+                        <span>İsim</span>
+                        <input type="text" id="txtName" placeholder="ör. Kaan" required>
+                    </label>
+                    <label class="field">
+                        <span>Mevki</span>
+                        <select id="selPosition">
+                            <option value="GK">Kaleci</option>
+                            <option value="DEF">Defans</option>
+                            <option value="MID" selected>Orta saha</option>
+                            <option value="FWD">Forvet</option>
+                        </select>
+                    </label>
+                    <label class="field field-rating">
+                        <span>Seviye <output id="ratingValue">6</output>/10</span>
+                        <input type="range" id="rngRating" min="1" max="10" value="6">
+                    </label>
+                    <button type="submit" class="btn btn-secondary" id="btnSavePlayer">Ekle</button>
+                </div>
+            </form>
+
+            <button type="button" class="btn btn-primary" id="btnBuild" disabled>
+                Takımları kur
+            </button>
+            <!-- Neden kurulamadığını söyleyen mesaj (12 değilse vb.) -->
+            <p class="hint" id="buildHint">Takım kurmak için 3 oyuncu daha seç.</p>
+        </section>
+
+
+        <!-- ============================================================
+             2. ADIM: TAKIMLAR
+             Kurulana kadar gizli: JS'i yazmaya başlayınca section'a hidden ekle
+             ============================================================ -->
+        <section class="panel results" id="results" aria-labelledby="resultsTitle">
+            <div class="panel-head">
+                <h2 class="panel-title" id="resultsTitle"><span class="step">2</span> Takımlar</h2>
+            </div>
+
+            <!-- Algoritma seçimi: aktif olana is-active -->
+            <div class="algo-tabs" role="tablist" aria-label="Algoritma">
+                <button type="button" class="algo-tab" role="tab" data-algo="snake" aria-selected="false">Yılan usulü</button>
+                <button type="button" class="algo-tab is-active" role="tab" data-algo="best" aria-selected="true">En dengeli</button>
+            </div>
+
+            <!-- İki algoritmanın karşılaştırması: daha iyi olan değere is-better -->
+            <table class="compare" id="compareTable">
+                <thead>
+                    <tr>
+                        <th scope="col"></th>
+                        <th scope="col">Yılan usulü</th>
+                        <th scope="col">En dengeli</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th scope="row">Puan farkı</th>
+                        <td id="snakeDiff">10</td>
+                        <td id="bestDiff" class="is-better">0</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Mevki dışı oynayan</th>
+                        <td id="snakeOut">2</td>
+                        <td id="bestOut" class="is-better">1</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- SAHA
+                 Her takım yarısı: .half[data-team="A|B"]
+                 İçinde 4 hat: .line[data-line="GK|DEF|MID|FWD"] -> oyuncu çipleri buraya eklenir
+                 Çip: .chip, mevki dışıysa .chip.is-out + .chip-note ("OS→DF") -->
+            <div class="pitch" id="pitch">
+                <div class="half" data-team="A">
+                    <div class="line" data-line="GK">
+                        <div class="chip"><span class="chip-rating">7</span><span class="chip-name">Tayfun</span></div>
+                    </div>
+                    <div class="line" data-line="DEF">
+                        <div class="chip"><span class="chip-rating">8</span><span class="chip-name">Can</span></div>
+                        <div class="chip is-out"><span class="chip-rating">7</span><span class="chip-name">Deniz</span><span class="chip-note">OS→DF</span></div>
+                    </div>
+                    <div class="line" data-line="MID">
+                        <div class="chip"><span class="chip-rating">9</span><span class="chip-name">Arda</span></div>
+                        <div class="chip"><span class="chip-rating">6</span><span class="chip-name">Barış</span></div>
+                    </div>
+                    <div class="line" data-line="FWD">
+                        <div class="chip"><span class="chip-rating">6</span><span class="chip-name">Hakan</span></div>
+                    </div>
+                </div>
+
+                <div class="half" data-team="B">
+                    <div class="line" data-line="GK">
+                        <div class="chip"><span class="chip-rating">6</span><span class="chip-name">Tolga</span></div>
+                    </div>
+                    <div class="line" data-line="DEF">
+                        <div class="chip"><span class="chip-rating">5</span><span class="chip-name">Onur</span></div>
+                        <div class="chip"><span class="chip-rating">4</span><span class="chip-name">Mert</span></div>
+                    </div>
+                    <div class="line" data-line="MID">
+                        <div class="chip"><span class="chip-rating">8</span><span class="chip-name">Ozan</span></div>
+                        <div class="chip"><span class="chip-rating">5</span><span class="chip-name">Yusuf</span></div>
+                    </div>
+                    <div class="line" data-line="FWD">
+                        <div class="chip"><span class="chip-rating">9</span><span class="chip-name">Cenk</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Takım toplamları -->
+            <div class="totals">
+                <p class="total" data-team="A"><span class="bib"></span> A Takımı <strong id="totalA">40</strong></p>
+                <p class="total" data-team="B"><strong id="totalB">40</strong> B Takımı <span class="bib"></span></p>
+            </div>
+        </section>
+
+    </main>
+
+
+    <!-- ============================================================
+         KALECİ SEÇİMİ
+         Gelenlerde tam 2 kaleci yoksa açılır: gkDialog.showModal()
+         Eksikse: "Kaleye kim geçecek?" -> saha oyuncularından seç
+         Fazlaysa: "Hangi ikisi kalede?" -> kalecilerden seç
+         ============================================================ -->
+    <dialog class="gk-dialog" id="gkDialog">
+        <form method="dialog" id="gkForm">
+            <h2 class="dialog-title" id="gkTitle">Kaleye kim geçecek?</h2>
+            <p class="dialog-text" id="gkText">Gelenler arasında sadece 1 kaleci var. Bir oyuncu daha seç.</p>
+
+            <!-- Seçenekler: checkbox listesi (JS doldurur) -->
+            <ul class="gk-options" id="gkOptions">
+                <li><label><input type="checkbox" value="9"> Arda <span class="pos" data-pos="MID">OS</span></label></li>
+                <li><label><input type="checkbox" value="4"> Can <span class="pos" data-pos="DEF">DF</span></label></li>
+                <li><label><input type="checkbox" value="14"> Cenk <span class="pos" data-pos="FWD">FV</span></label></li>
+            </ul>
+
+            <div class="dialog-actions">
+                <button type="button" class="btn btn-ghost" id="btnCancelGK">Vazgeç</button>
+                <button type="submit" class="btn btn-primary" id="btnConfirmGK">Takımları kur</button>
+            </div>
+        </form>
+    </dialog>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>

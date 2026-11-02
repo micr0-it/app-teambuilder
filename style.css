@@ -1,0 +1,782 @@
+/* =====================================================================
+   KİM KİMLE? - Halı saha takım kurucu
+   ---------------------------------------------------------------------
+   Fikir: Sonuç bir tablo değil, sahanın kendisi. Takımlar 1-2-2-1
+   dizilimiyle sahaya dizilir; bir takım turuncu yelekli, diğeri beyaz.
+   Gerisi sakin: açık zemin, beyaz paneller, sahayı öne çıkarmak için.
+
+   JS İÇİN:
+     .counter.is-ready              -> 12 oyuncu seçildi (yeşil)
+     #btnBuild[disabled]            -> takım kurulamaz
+     #results[hidden]               -> takımlar kurulana kadar gizli
+     .add-form.is-editing           -> oyuncu düzenleniyor
+     .algo-tab.is-active            -> seçili algoritma
+     .compare td.is-better          -> karşılaştırmada daha iyi olan değer
+     .line[data-line="GK|DEF|MID|FWD"] -> oyuncu çiplerinin ekleneceği hat
+     .chip.is-out + .chip-note      -> mevki dışı oynayan
+     .pos[data-pos="GK|DEF|MID|FWD"]-> mevki rozeti
+     dialog: gkDialog.showModal() / close()
+   ===================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Saira+Condensed:wght@600;700;800&display=swap');
+
+
+/* ---------------------------------------------------------------------
+   DEĞİŞKENLER
+   --------------------------------------------------------------------- */
+:root {
+    --ground: #EEF1EC;     /* sayfa zemini */
+    --panel:  #FFFFFF;
+    --ink:    #13241A;     /* yazı */
+    --muted:  #5D6B62;
+    --rule:   #DCE2DC;
+
+    --turf:   #2F7D46;     /* çim */
+    --turf-2: #2A7140;     /* biçme izleri */
+    --chalk:  rgba(255, 255, 255, 0.85);   /* saha çizgileri */
+
+    --bib:    #FF6B1A;     /* A takımı: turuncu yelek */
+    --white:  #FFFFFF;     /* B takımı: beyaz forma */
+    --out:    #FFD23F;     /* mevki dışı uyarısı */
+
+    /* mevki rozetleri */
+    --pos-gk:  #F2C94C;
+    --pos-def: #4A7BD0;
+    --pos-mid: #2F9E6B;
+    --pos-fwd: #E0533D;
+
+    --display: 'Saira Condensed', 'Arial Narrow', sans-serif;
+    --text:    'Barlow', system-ui, sans-serif;
+}
+
+
+/* ---------------------------------------------------------------------
+   GENEL
+   --------------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    min-height: 100vh;
+    font-family: var(--text);
+    font-size: 1rem;
+    color: var(--ink);
+    background: var(--ground);
+}
+
+:focus-visible {
+    outline: 3px solid var(--bib);
+    outline-offset: 2px;
+}
+
+[hidden] {
+    display: none !important;
+}
+
+
+/* ---------------------------------------------------------------------
+   BAŞLIK
+   --------------------------------------------------------------------- */
+.top {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 40px 20px 8px;
+}
+
+.title {
+    font-family: var(--display);
+    font-size: clamp(2.6rem, 8vw, 4rem);
+    font-weight: 800;
+    line-height: 0.95;
+}
+
+.subtitle {
+    margin-top: 6px;
+    font-size: 1.1rem;
+    color: var(--muted);
+}
+
+
+/* ---------------------------------------------------------------------
+   YERLEŞİM: masaüstünde iki sütun, solda kadro sağda saha
+   --------------------------------------------------------------------- */
+.app {
+    display: grid;
+    grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 20px 20px 48px;
+}
+
+.panel {
+    padding: 20px;
+    background: var(--panel);
+    border-radius: 10px;
+    box-shadow: 0 1px 2px rgba(19, 36, 26, 0.06);
+}
+
+.panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.panel-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--display);
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+/* adım numarası: akış gerçekten sıralı (önce seç, sonra kur) */
+.step {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    font-size: 1rem;
+    color: var(--white);
+    background: var(--ink);
+    border-radius: 50%;
+}
+
+.counter {
+    font-size: 0.95rem;
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.counter strong {
+    font-family: var(--display);
+    font-size: 1.4rem;
+    color: var(--ink);
+}
+
+.counter.is-ready strong {
+    color: var(--turf);
+}
+
+
+/* ---------------------------------------------------------------------
+   KADRO LİSTESİ
+   --------------------------------------------------------------------- */
+.roster-list {
+    list-style: none;
+    border-top: 1px solid var(--rule);
+}
+
+.roster-item {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    border-bottom: 1px solid var(--rule);
+}
+
+.pick {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 10px 6px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.pick:hover {
+    background: #F5F7F4;
+}
+
+.pick input {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    accent-color: var(--turf);
+    cursor: pointer;
+}
+
+.pick-name {
+    flex: 1;
+    min-width: 0;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* İşaretli değilse soluk */
+.pick:has(input:not(:checked)) .pick-name,
+.pick:has(input:not(:checked)) .pick-rating {
+    color: var(--muted);
+}
+
+.pick-rating {
+    font-family: var(--display);
+    font-size: 1.2rem;
+    font-weight: 700;
+    min-width: 1.4em;
+    text-align: right;
+}
+
+/* Mevki rozeti */
+.pos {
+    display: inline-grid;
+    place-items: center;
+    min-width: 30px;
+    height: 22px;
+    padding: 0 4px;
+    font-family: var(--display);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--white);
+    border-radius: 4px;
+}
+
+.pos[data-pos="GK"]  { background: var(--pos-gk); color: var(--ink); }
+.pos[data-pos="DEF"] { background: var(--pos-def); }
+.pos[data-pos="MID"] { background: var(--pos-mid); }
+.pos[data-pos="FWD"] { background: var(--pos-fwd); }
+
+.icon-btn {
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    font-size: 0.85rem;
+    color: var(--muted);
+    background: none;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.icon-btn:hover {
+    color: var(--ink);
+    background: #F0F3EF;
+}
+
+.btn-delete:hover {
+    color: var(--pos-fwd);
+}
+
+
+/* ---------------------------------------------------------------------
+   OYUNCU EKLEME FORMU
+   --------------------------------------------------------------------- */
+.add-form {
+    margin-top: 18px;
+    padding: 14px;
+    background: #F5F7F4;
+    border-radius: 8px;
+}
+
+.form-title {
+    margin-bottom: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+/* Düzenleme modunda turuncu çerçeve */
+.add-form.is-editing {
+    box-shadow: inset 0 0 0 2px var(--bib);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    align-items: end;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+
+.field-name {
+    grid-column: 1 / -1;
+}
+
+.field input[type="text"],
+.field select {
+    width: 100%;
+    padding: 9px 10px;
+    font-family: var(--text);
+    font-size: 1rem;
+    color: var(--ink);
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+}
+
+.field input[type="range"] {
+    width: 100%;
+    height: 38px;
+    accent-color: var(--turf);
+}
+
+.field output {
+    font-weight: 600;
+    color: var(--ink);
+}
+
+
+/* ---------------------------------------------------------------------
+   BUTONLAR
+   --------------------------------------------------------------------- */
+.btn {
+    padding: 10px 16px;
+    font-family: var(--text);
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.btn-primary {
+    color: var(--white);
+    background: var(--ink);
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: var(--turf);
+}
+
+.btn-primary:disabled {
+    color: #9AA59D;
+    background: #E3E8E2;
+    cursor: not-allowed;
+}
+
+.btn-secondary {
+    grid-column: 1 / -1;
+    color: var(--ink);
+    background: var(--panel);
+    border: 1px solid var(--rule);
+}
+
+.btn-secondary:hover {
+    border-color: var(--ink);
+}
+
+.btn-ghost {
+    color: var(--muted);
+    background: none;
+}
+
+.btn-ghost:hover {
+    color: var(--ink);
+}
+
+#btnBuild {
+    width: 100%;
+    margin-top: 18px;
+    padding: 14px;
+    font-family: var(--display);
+    font-size: 1.35rem;
+    font-weight: 700;
+}
+
+.hint {
+    margin-top: 8px;
+    font-size: 0.9rem;
+    text-align: center;
+    color: var(--muted);
+}
+
+.hint:empty {
+    display: none;
+}
+
+
+/* ---------------------------------------------------------------------
+   SONUÇLAR: ALGORİTMA SEKMELERİ VE KARŞILAŞTIRMA
+   --------------------------------------------------------------------- */
+.algo-tabs {
+    display: inline-flex;
+    padding: 3px;
+    background: #EEF1EC;
+    border-radius: 8px;
+}
+
+.algo-tab {
+    padding: 7px 14px;
+    font-family: var(--text);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--muted);
+    background: none;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.algo-tab.is-active {
+    color: var(--ink);
+    background: var(--panel);
+    box-shadow: 0 1px 2px rgba(19, 36, 26, 0.12);
+}
+
+.compare {
+    width: 100%;
+    margin: 14px 0 18px;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+.compare th,
+.compare td {
+    padding: 7px 8px;
+    text-align: right;
+    border-bottom: 1px solid var(--rule);
+}
+
+.compare thead th {
+    font-weight: 500;
+    color: var(--muted);
+}
+
+.compare tbody th {
+    font-weight: 500;
+    text-align: left;
+}
+
+.compare td {
+    font-family: var(--display);
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.compare td.is-better {
+    color: var(--turf);
+}
+
+
+/* ---------------------------------------------------------------------
+   SAHA
+   Yatay: A solda (kalesi solda), B sağda (kalesi sağda)
+   --------------------------------------------------------------------- */
+.pitch {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    aspect-ratio: 16 / 10;
+    padding: 18px 10px;
+    background:
+        /* biçme izleri */
+        repeating-linear-gradient(90deg, var(--turf) 0 10%, var(--turf-2) 10% 20%);
+    border: 3px solid var(--chalk);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+/* orta çizgi ve orta yuvarlak */
+.pitch::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    border-left: 2px solid var(--chalk);
+}
+
+.pitch::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 18%;
+    aspect-ratio: 1;
+    border: 2px solid var(--chalk);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* bir takımın yarısı: 4 hat yan yana (kale → orta) */
+.half {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+}
+
+/* B takımı ayna: kalesi sağda */
+.half[data-team="B"] {
+    direction: rtl;
+}
+
+.half[data-team="B"] > * {
+    direction: ltr;
+}
+
+/* ceza sahaları */
+.half::before {
+    content: "";
+    position: absolute;
+    top: 30%;
+    bottom: 30%;
+    width: 14%;
+    border: 2px solid var(--chalk);
+}
+
+.half[data-team="A"]::before { left: -10px;  border-left: none; }
+.half[data-team="B"]::before { right: -10px; border-right: none; }
+
+.line {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    align-items: center;
+}
+
+/* ----- Oyuncu çipi ----- */
+.chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    max-width: 100%;
+}
+
+.chip-rating {
+    display: grid;
+    place-items: center;
+    width: clamp(34px, 5.5vw, 46px);
+    aspect-ratio: 1;
+    font-family: var(--display);
+    font-size: clamp(1rem, 1.8vw, 1.3rem);
+    font-weight: 800;
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.half[data-team="A"] .chip-rating {
+    color: var(--ink);
+    background: var(--bib);
+}
+
+.half[data-team="B"] .chip-rating {
+    color: var(--ink);
+    background: var(--white);
+}
+
+.chip-name {
+    max-width: 100%;
+    padding: 1px 6px;
+    font-size: clamp(0.75rem, 1.4vw, 0.9rem);
+    font-weight: 600;
+    color: var(--white);
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Mevki dışı oynayan: sarı kesik çizgili halka + küçük not */
+.chip.is-out .chip-rating {
+    outline: 3px dashed var(--out);
+    outline-offset: 2px;
+}
+
+.chip-note {
+    font-family: var(--display);
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--out);
+}
+
+/* ----- Takım toplamları ----- */
+.totals {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 12px;
+}
+
+.total {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.total strong {
+    font-family: var(--display);
+    font-size: 1.8rem;
+    font-weight: 800;
+}
+
+/* takım rengi göstergesi: küçük yelek */
+.bib {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+}
+
+.total[data-team="A"] .bib { background: var(--bib); }
+.total[data-team="B"] .bib { background: var(--white); box-shadow: inset 0 0 0 1.5px var(--ink); }
+
+
+/* ---------------------------------------------------------------------
+   KALECİ SEÇİMİ (dialog)
+   --------------------------------------------------------------------- */
+.gk-dialog {
+    width: min(420px, calc(100% - 32px));
+    margin: auto;
+    padding: 24px;
+    color: var(--ink);
+    background: var(--panel);
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+}
+
+.gk-dialog::backdrop {
+    background: rgba(19, 36, 26, 0.55);
+}
+
+.dialog-title {
+    font-family: var(--display);
+    font-size: 1.7rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.dialog-text {
+    margin-top: 6px;
+    color: var(--muted);
+}
+
+.gk-options {
+    list-style: none;
+    max-height: 280px;
+    margin: 14px 0 18px;
+    overflow-y: auto;
+    border-top: 1px solid var(--rule);
+}
+
+.gk-options label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--rule);
+    cursor: pointer;
+}
+
+.gk-options input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--turf);
+}
+
+.gk-options .pos {
+    margin-left: auto;
+}
+
+.dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+
+/* ---------------------------------------------------------------------
+   RESPONSIVE
+   --------------------------------------------------------------------- */
+
+/* Tablet ve altı: tek sütun */
+@media (max-width: 860px) {
+    .app {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Telefon: saha dikey (A üstte, B altta) */
+@media (max-width: 560px) {
+    .top    { padding: 28px 14px 4px; }
+    .app    { padding: 16px 12px 36px; gap: 14px; }
+    .panel  { padding: 16px 14px; }
+
+    .pitch {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr 1fr;
+        aspect-ratio: auto;          /* yükseklik içeriğe göre: kimse sahadan taşmasın */
+        padding: 10px 14px;
+        background: repeating-linear-gradient(180deg, var(--turf) 0 10%, var(--turf-2) 10% 20%);
+    }
+
+    .pitch::before {
+        top: 50%;
+        bottom: auto;
+        left: 0;
+        right: 0;
+        border-left: none;
+        border-top: 2px solid var(--chalk);
+    }
+
+    .pitch::after {
+        width: 26%;
+    }
+
+    /* hatlar artık yukarıdan aşağıya: kale en uçta
+       A: kale üstte (GK → FWD aşağı doğru), B: kale altta (ters sıra) */
+    .half {
+        display: flex;
+        flex-direction: column;
+        direction: ltr;
+    }
+
+    .half[data-team="B"] {
+        flex-direction: column-reverse;
+    }
+
+    .line {
+        flex: 1;
+        flex-direction: row;
+        min-height: 72px;
+    }
+
+    .half::before {
+        top: auto;
+        bottom: auto;
+        left: 28%;
+        right: 28%;
+        width: auto;
+        height: 12%;
+        border: 2px solid var(--chalk);
+    }
+
+    .half[data-team="A"]::before { top: -10px;    left: 28%; border-top: none; }
+    .half[data-team="B"]::before { bottom: -10px; right: 28%; border-bottom: none; }
+
+    .chip-rating { width: 40px; font-size: 1.15rem; }
+    .chip-name   { font-size: 0.8rem; }
+}
+
+/* Hareket hassasiyeti olanlar için */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
