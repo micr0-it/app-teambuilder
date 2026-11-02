@@ -7,6 +7,8 @@ const btnBuild = document.querySelector("#btnBuild");
 const btnSavePlyr = document.querySelector("#btnSavePlayer");
 const selectedCountEl = document.querySelector("#selectedCount");
 const buildHint = document.querySelector("#buildHint");
+const ratingInput = document.querySelector("#rngRating");
+const ratingOutput = document.querySelector("#ratingValue");
 
 
 const POSITION_LABELS = { GK: "KL", DEF: "DF", MID: "OS", FWD: "FV" };
@@ -22,7 +24,22 @@ let players = await loadPlayers();
 function runEvents() {
     document.addEventListener("DOMContentLoaded", showRosterUI);
     rosterList.addEventListener("change", updateSelectionUI);
+    ratingInput.addEventListener("input", changeRating);
 }
+
+
+
+//Şimdi forma kişi ekleme kısmı gelecek.
+//Eventi butona değil forma baglayacagız kullanıcı enter kullanırsa da form post olsun
+//preventDefault ile sayfa yenilemesinin önüne gececeğiz
+
+
+function changeRating(e) {
+    //output html elementinin value özelliği textContent ile aynı şey.
+    ratingOutput.value = e.target.value;
+}
+
+
 
 function updateSelectionUI() {
     //işaretli checkbox sayısı
