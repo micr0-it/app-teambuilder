@@ -23,13 +23,14 @@ runEvents();
 
 let players = await loadPlayers();
 
-
+let selectedPlayerId; //edit fonksiyon kontrolü için lazım
 
 
 function runEvents() {
     document.addEventListener("DOMContentLoaded", showRosterUI);
     rosterList.addEventListener("change", updateSelectionUI);
     rosterList.addEventListener("click", removePlayer);
+    rosterList.addEventListener("click", editPlayer);
     ratingInput.addEventListener("input", changeRating);
     playerForm.addEventListener("submit", addPlayer);
 }
@@ -41,12 +42,47 @@ function runEvents() {
 //preventDefault ile sayfa yenilemesinin önüne gececeğiz
 
 
+//Oyuncu Güncelleme Kısmı UI VE STORAGE
+//Burada butona bastık ve edite girdik
+//Forma iki tane aksiyon bağlı form bunun edit veya add oldugunu anlaması ıcın
+//Id tanımladık let tıklanınca ıd degıskenıne atama yaptık
+//Buradaki fonksiyon forma bilgileri doldurdu
+//Kaydete basınca aslında ekleme fonksiyonu üzerinden submit olacak orada da eğer
+//let ile tanımlı id değişkeninde veri varsa guncelleme kısmı calısacak
+function editPlayer(e) {
+    const editButton = e.target.closest(".btn-edit");
+    if(editButton){
+        const rosterLi = editButton.closest(".roster-item");
+        const selectedPlayer = players.find((player) => player.id === Number(rosterLi.dataset.id));
+        nameInput.value = selectedPlayer.name;
+        selectPosition.value = selectedPlayer.position;
+        ratingOutput.value = selectedPlayer.rating;
+        ratingInput.value = selectedPlayer.rating;
+        
+        selectedPlayerId = selectedPlayer.id;
+        playerForm.classList.add("is-editing");
+        btnSavePlyr.textContent = "Kaydet";
+    }
+}
+
 //Oyuncu Silme Kısmı UI VE STORAGE
 
 function removePlayer(e) {
     const deleteButton = e.target.closest(".btn-delete");
     if (deleteButton) {
+        
         const rosterLi = deleteButton.closest(".roster-item");
+        /**
+         * “Düzenlerken aynı oyuncu silinirse” durumu henüz ele alınmamış. 
+         * Şunu dene: bir oyuncunun kalemine bas, sonra aynı oyuncunun çöp kutusuna bas, sonra “Kaydet”e bas. 
+         * rosterLi bulunamayacağı için null.querySelector hatası alırsın.
+         *  removePlayer’da, silinen oyuncunun id’si selectedPlayerId’ye eşitse resetForm’u çağırman yeterli.
+         */
+
+        if (Number(rosterLi.dataset.id) === selectedPlayerId) {
+            resetForm();
+        }
+
         //Burada Storage'den sileceğiz bize value değer lazım bunu da rosterLi'teki id alarak yapalım
         removePlayerStorage(Number(rosterLi.dataset.id));
         rosterLi.remove();
@@ -58,7 +94,8 @@ function removePlayerStorage(playerId) {
         return player.id === playerId;
     });
 
-    if(index != -1){
+    if(index !== -1){
+        
         players.splice(index,1)
         savePlayers(players);
     }
@@ -74,7 +111,36 @@ function addPlayer(e){
     
     if (inputText===""){
         alert("Oyuncu bilgilerini eksiksiz doldurun");
+        return;
     }
+
+
+    if(selectedPlayerId!==null){
+        
+        //storage guncelleme
+    
+        const selectedPlayer = players.find((player) => player.id === selectedPlayerId);
+        selectedPlayer.name = inputText;
+        selectedPlayer.position= playerPosition;
+        selectedPlayer.rating = playerRating; 
+        savePlayers(players);
+
+
+
+        //ui güncelleme
+        //a) güncellenecek satırı id'sinden bul
+        const rosterLi = rosterList.querySelector(`.roster-item[data-id="${selectedPlayerId}"]`);
+
+        //b) satırın içindeki üç elemanı yeni değerlerle güncelle
+        rosterLi.querySelector(".pick-name").textContent = selectedPlayer.name;
+        rosterLi.querySelector(".pick-rating").textContent = selectedPlayer.rating;
+
+        const spanPosition = rosterLi.querySelector(".pos");
+        spanPosition.textContent = POSITION_LABELS[selectedPlayer.position];   //ekranda görünen: "DF"
+        spanPosition.dataset.pos = selectedPlayer.position;                    //rengi belirleyen: "DEF"
+    }
+
+
     else{
         const newPlayer = new Player(Date.now(),inputText,playerPosition,playerRating);
         //Storage ekleme
@@ -84,8 +150,8 @@ function addPlayer(e){
         addRosterHTMLElement(newPlayer);
         //Seçili kişilerin güncellenmesi
         updateSelectionUI();
-        nameInput.value="";
     }
+    resetForm();
     
 }
 
@@ -184,3 +250,9 @@ function changeRating(e) {
 }
 
 
+function resetForm() {
+    selectedPlayerId = null;
+    playerForm.reset();
+    playerForm.classList.remove("is-editing");
+    btnSavePlyr.textContent = "Ekle";
+}
