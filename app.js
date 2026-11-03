@@ -14,6 +14,14 @@ const playerForm = document.querySelector("#playerForm");
 const nameInput = document.querySelector("#txtName");
 const selectPosition = document.querySelector("#selPosition");
 const algoTabs = document.querySelector(".algo-tabs");
+const resultsSection = document.querySelector("#results");
+const pitch = document.querySelector("#pitch");
+const totalA = document.querySelector("#totalA");
+const totalB = document.querySelector("#totalB");
+const snakeDiffCell = document.querySelector("#snakeDiff");
+const bestDiffCell = document.querySelector("#bestDiff");
+const snakeOutCell = document.querySelector("#snakeOut");
+const bestOutCell = document.querySelector("#bestOut");
 
 
 const POSITION_LABELS = { GK: "KL", DEF: "DF", MID: "OS", FWD: "FV" };
@@ -23,7 +31,7 @@ runEvents();
 
 let players = await loadPlayers();
 
-let selectedPlayerId; //edit fonksiyon kontrolü için lazım,
+let selectedPlayerId = null; //edit fonksiyon kontrolü için lazım,
 let matchPlayers = [];
 //let snakeTeam1, snakeTeam2, bestTeam1, bestTeam2; bunları tek bir objede tutacagım
 let results = {};
@@ -57,8 +65,7 @@ function createTeams() {
     const playerId = Number(rosterLi.dataset.id);                    //2) id'yi sayı olarak oku
     return players.find(player => player.id === playerId);           //3) oyuncuyu bul ve döndür
 });
-
-    console.log(matchPlayers[0]); 
+ 
     const goalkeepers = matchPlayers.filter((player) => player.position === "GK");
     console.log(goalkeepers);
     
@@ -82,7 +89,7 @@ function snakeOrBest(e) {
     showResults();
 }
 
-function buildTeams(goalkeepers,e) {
+function buildTeams(goalkeepers) {
     const teamBuilder = new TeamBuilder(matchPlayers,goalkeepers); //jste ctora verılen parametre sıraları onemlı
     const best = teamBuilder.buildBestOfAll();
     const snake = teamBuilder.buildSnakeDraft();
@@ -94,8 +101,9 @@ function buildTeams(goalkeepers,e) {
      * Kullanıcı “Takımları kur”a ikinci kez bastığında eski sonuçlar yenileriyle değişir.
      */
     
-    results.snake = teamBuilder.buildSnakeDraft();
-    results.best = teamBuilder.buildBestOfAll();
+    results.snake = best;
+    results.best = snake;
+    fillCompareTable();
     showResults(); 
 }
 
@@ -321,9 +329,19 @@ function showResults() {
 
     //seçili algoritmanın takımları
     const [teamA, teamB] = results[activeAlgo];
-    console.log(activeAlgo, teamA, teamB);
+    // console.log(activeAlgo, teamA, teamB);
 
-    //sonraki adımlar: sahayı çiz, toplamları ve karşılaştırma tablosunu doldur
+    const line = pitch.querySelectorAll(".line");
+    //Bu olmazsa sekme değiştirdikçe çipler üst üste birikir.
+    line.forEach(element => {
+        element.innerHTML = ""
+    });
+    drawTeam(teamA, "A");
+    drawTeam(teamB, "B");
+    totalA.textContent = teamA.totalRating; // getter parantezsiz
+    totalB.textContent = teamB.totalRating; // getter parantezsiz
+    resultsSection.hidden = false; 
+    
 }
 
 //Yardımcı Fonksiyonlar
@@ -338,4 +356,70 @@ function resetForm() {
     playerForm.reset();
     playerForm.classList.remove("is-editing");
     btnSavePlyr.textContent = "Ekle";
+}
+
+//item => { player, slot }
+function createChipItem(item) {
+    const {player, slot, ...otherInfos} = item;
+    const div = document.createElement("div");
+    div.className = "chip";
+    const spanRating = document.createElement("span");
+    const spanName = document.createElement("span");
+    spanRating.className = "chip-rating";
+    spanRating.textContent = player.rating;
+    spanName.className = "chip-name";
+    spanName.textContent = player.name;
+    if(player.position !== slot){
+        div.classList.add("is-out");
+        const spanChipNote = document.createElement("span");
+        spanChipNote.className = "chip-note"
+        spanChipNote.textContent = `${POSITION_LABELS[player.position]}→${POSITION_LABELS[slot]}`;
+        div.appendChild(spanChipNote);
+    }
+    div.appendChild(spanRating);
+    div.appendChild(spanName);
+    return div;
+}
+
+function drawTeam(team, letter) {
+    //letter ya "A" ya "B" olacak.
+    const half = pitch.querySelector(`.half[data-team="${letter}"]`);
+    //lineup: [{ player, slot }, ...] -> her eleman bir oyuncu ve oynadığı yer
+    team.lineup.forEach(function (item) {
+        //pitch'te değil half'ta arıyoruz: yoksa hep A'nın hattı bulunur
+        //slot'a göre: Deniz OS ama DF'de oynuyorsa DEF hattına gider
+        const line = half.querySelector(`.line[data-line="${item.slot}"]`);
+
+        //createChip çipi üretip döndürür, ekleme işini burada yapıyoruz
+        line.appendChild(createChipItem(item));
+    });
+}
+
+function fillCompareTable() {
+
+    //her algoritmanın sonucu iki takımlık bir dizi: [A, B]
+    const [snakeA, snakeB] = results.snake;
+    const [bestA, bestB] = results.best;
+
+    //puan farkı: hangi takım güçlü olursa olsun pozitif olsun diye Math.abs
+    const snakeDiff = Math.abs(snakeA.totalRating - snakeB.totalRating);
+    const bestDiff = Math.abs(bestA.totalRating - bestB.totalRating);
+
+    //mevki dışı: iki takımdakilerin toplamı (getter -> parantez yok)
+    const snakeOut = snakeA.outOfPositionCount + snakeB.outOfPositionCount;
+    const bestOut = bestA.outOfPositionCount + bestB.outOfPositionCount;
+
+    //sayıları hücrelere yaz
+    snakeDiffCell.textContent = snakeDiff;
+    bestDiffCell.textContent = bestDiff;
+    snakeOutCell.textContent = snakeOut;
+    bestOutCell.textContent = bestOut;
+
+    //düşük olan daha iyi: koşul true ise is-better eklenir, false ise kaldırılır
+    //eşitse ikisi de false -> hiçbiri vurgulanmaz
+    snakeDiffCell.classList.toggle("is-better", snakeDiff < bestDiff);
+    bestDiffCell.classList.toggle("is-better", bestDiff < snakeDiff);
+    snakeOutCell.classList.toggle("is-better", snakeOut < bestOut);
+    bestOutCell.classList.toggle("is-better", bestOut < snakeOut);
+
 }

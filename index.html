@@ -140,7 +140,7 @@
              2. ADIM: TAKIMLAR
              Kurulana kadar gizli: JS'i yazmaya başlayınca section'a hidden ekle
              ============================================================ -->
-        <section class="panel results" id="results" aria-labelledby="resultsTitle">
+        <section class="panel results" id="results" aria-labelledby="resultsTitle" hidden>
             <div class="panel-head">
                 <h2 class="panel-title" id="resultsTitle"><span class="step">2</span> Takımlar</h2>
             </div>
@@ -163,13 +163,14 @@
                 <tbody>
                     <tr>
                         <th scope="row">Puan farkı</th>
-                        <td id="snakeDiff">10</td>
-                        <td id="bestDiff" class="is-better">0</td>
+                        <td id="snakeDiff">/td>
+                        <!-- <td id="bestDiff" class="is-better"></td> -->
+                        <td id="bestDiff"></td>
                     </tr>
                     <tr>
                         <th scope="row">Mevki dışı oynayan</th>
-                        <td id="snakeOut">2</td>
-                        <td id="bestOut" class="is-better">1</td>
+                        <td id="snakeOut"></td>
+                        <td id="bestOut" class="is-better"></td>
                     </tr>
                 </tbody>
             </table>
@@ -181,43 +182,43 @@
             <div class="pitch" id="pitch">
                 <div class="half" data-team="A">
                     <div class="line" data-line="GK">
-                        <div class="chip"><span class="chip-rating">7</span><span class="chip-name">Tayfun</span></div>
+                        <!-- <div class="chip"><span class="chip-rating">7</span><span class="chip-name">Tayfun</span></div> -->
                     </div>
                     <div class="line" data-line="DEF">
-                        <div class="chip"><span class="chip-rating">8</span><span class="chip-name">Can</span></div>
-                        <div class="chip is-out"><span class="chip-rating">7</span><span class="chip-name">Deniz</span><span class="chip-note">OS→DF</span></div>
+                        <!-- <div class="chip"><span class="chip-rating">8</span><span class="chip-name">Can</span></div>
+                        <div class="chip is-out"><span class="chip-rating">7</span><span class="chip-name">Deniz</span><span class="chip-note">OS→DF</span></div> -->
                     </div>
                     <div class="line" data-line="MID">
-                        <div class="chip"><span class="chip-rating">9</span><span class="chip-name">Arda</span></div>
-                        <div class="chip"><span class="chip-rating">6</span><span class="chip-name">Barış</span></div>
+                        <!-- <div class="chip"><span class="chip-rating">9</span><span class="chip-name">Arda</span></div>
+                        <div class="chip"><span class="chip-rating">6</span><span class="chip-name">Barış</span></div> -->
                     </div>
                     <div class="line" data-line="FWD">
-                        <div class="chip"><span class="chip-rating">6</span><span class="chip-name">Hakan</span></div>
+                        <!-- <div class="chip"><span class="chip-rating">6</span><span class="chip-name">Hakan</span></div> -->
                     </div>
                 </div>
 
                 <div class="half" data-team="B">
                     <div class="line" data-line="GK">
-                        <div class="chip"><span class="chip-rating">6</span><span class="chip-name">Tolga</span></div>
+                        <!-- <div class="chip"><span class="chip-rating">6</span><span class="chip-name">Tolga</span></div> -->
                     </div>
                     <div class="line" data-line="DEF">
-                        <div class="chip"><span class="chip-rating">5</span><span class="chip-name">Onur</span></div>
-                        <div class="chip"><span class="chip-rating">4</span><span class="chip-name">Mert</span></div>
+                        <!-- <div class="chip"><span class="chip-rating">5</span><span class="chip-name">Onur</span></div>
+                        <div class="chip"><span class="chip-rating">4</span><span class="chip-name">Mert</span></div> -->
                     </div>
                     <div class="line" data-line="MID">
-                        <div class="chip"><span class="chip-rating">8</span><span class="chip-name">Ozan</span></div>
-                        <div class="chip"><span class="chip-rating">5</span><span class="chip-name">Yusuf</span></div>
+                        <!-- <div class="chip"><span class="chip-rating">8</span><span class="chip-name">Ozan</span></div>
+                        <div class="chip"><span class="chip-rating">5</span><span class="chip-name">Yusuf</span></div> -->
                     </div>
                     <div class="line" data-line="FWD">
-                        <div class="chip"><span class="chip-rating">9</span><span class="chip-name">Cenk</span></div>
+                        <!-- <div class="chip"><span class="chip-rating">9</span><span class="chip-name">Cenk</span></div> -->
                     </div>
                 </div>
             </div>
 
             <!-- Takım toplamları -->
             <div class="totals">
-                <p class="total" data-team="A"><span class="bib"></span> A Takımı <strong id="totalA">40</strong></p>
-                <p class="total" data-team="B"><strong id="totalB">40</strong> B Takımı <span class="bib"></span></p>
+                <p class="total" data-team="A"><span class="bib"></span> A Takımı <strong id="totalA"></strong></p>
+                <p class="total" data-team="B"><strong id="totalB"></strong> B Takımı <span class="bib"></span></p>
             </div>
         </section>
 
