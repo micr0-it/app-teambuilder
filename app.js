@@ -13,7 +13,7 @@ const ratingOutput = document.querySelector("#ratingValue");
 const playerForm = document.querySelector("#playerForm");
 const nameInput = document.querySelector("#txtName");
 const selectPosition = document.querySelector("#selPosition");
-
+const algoTabs = document.querySelector(".algo-tabs");
 
 
 const POSITION_LABELS = { GK: "KL", DEF: "DF", MID: "OS", FWD: "FV" };
@@ -25,7 +25,9 @@ let players = await loadPlayers();
 
 let selectedPlayerId; //edit fonksiyon kontrolü için lazım,
 let matchPlayers = [];
-let snakeTeam1, snakeTeam2, bestTeam1, bestTeam2;
+//let snakeTeam1, snakeTeam2, bestTeam1, bestTeam2; bunları tek bir objede tutacagım
+let results = {};
+let activeAlgo = "best";
 function runEvents() {
     document.addEventListener("DOMContentLoaded", showRosterUI);
     rosterList.addEventListener("change", updateSelectionUI);
@@ -34,6 +36,7 @@ function runEvents() {
     ratingInput.addEventListener("input", changeRating);
     playerForm.addEventListener("submit", addPlayer);
     btnBuild.addEventListener("click", createTeams);
+    algoTabs.addEventListener("click", snakeOrBest);
 }
 
 
@@ -65,15 +68,35 @@ function createTeams() {
     
 }
 
-function buildTeams(goalkeepers) {
-    const teambuilder = new TeamBuilder(matchPlayers,goalkeepers); //jste ctora verılen parametre sıraları onemlı
-    const best = teambuilder.buildBestOfAll();
-    const snake = teambuilder.buildSnakeDraft();
-    [snakeTeam1,snakeTeam2]= snake;
-    [bestTeam1,bestTeam2]= best;
-    console.log([snakeTeam1,snakeTeam2]);
-    console.log([bestTeam1,bestTeam2]);
+//SEKME TIKLAMASI: sadece tıklamayı karşılar, ekranı showResults günceller
+function snakeOrBest(e) {
     
+    const tab = e.target.closest(".algo-tab");
+    if (!tab) {
+        return;   //sekmelerin arasındaki boşluğa tıklandı
+    }
+
+    //anahtarlar data-algo ile aynı olduğu için if'e gerek yok: "snake" ya da "best"
+    activeAlgo = tab.dataset.algo;
+
+    showResults();
+}
+
+function buildTeams(goalkeepers,e) {
+    const teamBuilder = new TeamBuilder(matchPlayers,goalkeepers); //jste ctora verılen parametre sıraları onemlı
+    const best = teamBuilder.buildBestOfAll();
+    const snake = teamBuilder.buildSnakeDraft();
+    // [snakeTeam1,snakeTeam2]= snake;
+    // [bestTeam1,bestTeam2]= best;
+    /**
+     * results.snake = ...: Objeye yeni bir anahtar ekleyip ona değer atıyor. 
+     * Anahtar yoksa oluşturuyor, varsa üzerine yazıyor. 
+     * Kullanıcı “Takımları kur”a ikinci kez bastığında eski sonuçlar yenileriyle değişir.
+     */
+    
+    results.snake = teamBuilder.buildSnakeDraft();
+    results.best = teamBuilder.buildBestOfAll();
+    showResults(); 
 }
 
 
@@ -282,7 +305,26 @@ function showRosterUI() {
     
 }
 
+//EKRANI GÜNCELLER: e almaz, hem buildTeams'ten hem sekmeden çağrılır
+function showResults() {
+    //henüz takım kurulmadıysa gösterecek bir şey yok
+    if (!results[activeAlgo]) {
+        return;
+    }
 
+    //sekmelerin görünümü: seçili olana is-active, diğerinden kaldır
+    algoTabs.querySelectorAll(".algo-tab").forEach(function (tab) {
+        const isActive = tab.dataset.algo === activeAlgo;
+        tab.classList.toggle("is-active", isActive);
+        tab.setAttribute("aria-selected", isActive);   //ekran okuyucular için
+    });
+
+    //seçili algoritmanın takımları
+    const [teamA, teamB] = results[activeAlgo];
+    console.log(activeAlgo, teamA, teamB);
+
+    //sonraki adımlar: sahayı çiz, toplamları ve karşılaştırma tablosunu doldur
+}
 
 //Yardımcı Fonksiyonlar
 function changeRating(e) {
