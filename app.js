@@ -22,13 +22,20 @@ const snakeDiffCell = document.querySelector("#snakeDiff");
 const bestDiffCell = document.querySelector("#bestDiff");
 const snakeOutCell = document.querySelector("#snakeOut");
 const bestOutCell = document.querySelector("#bestOut");
+const gkDialog = document.querySelector("#gkDialog");
+const gkForm = document.querySelector("#gkForm");
+const gkTitle = document.querySelector("#gkTitle");
+const gkText = document.querySelector("#gkText");
+const gkOptions = document.querySelector("#gkOptions");
+const btnCancelGK = document.querySelector("#btnCancelGK");
 
 
 const POSITION_LABELS = { GK: "KL", DEF: "DF", MID: "OS", FWD: "FV" };
 const MATCH_SIZE = 12;   //6'ya 6:
 
-runEvents();
 
+let gkNeeded=null; //Kaç kişi seçilmesi gerekiyor (sayı).
+let gkFixed = null; //Zaten kesin kaleci olanlar (dizi). Eksik durumunda listedeki gerçek kaleci, fazla durumunda boş dizi, çünkü orada hepsi seçimden geliyor.
 let players = await loadPlayers();
 
 let selectedPlayerId = null; //edit fonksiyon kontrolü için lazım,
@@ -36,6 +43,7 @@ let matchPlayers = [];
 //let snakeTeam1, snakeTeam2, bestTeam1, bestTeam2; bunları tek bir objede tutacagım
 let results = {};
 let activeAlgo = "best";
+runEvents();
 function runEvents() {
     document.addEventListener("DOMContentLoaded", showRosterUI);
     rosterList.addEventListener("change", updateSelectionUI);
@@ -45,15 +53,17 @@ function runEvents() {
     playerForm.addEventListener("submit", addPlayer);
     btnBuild.addEventListener("click", createTeams);
     algoTabs.addEventListener("click", snakeOrBest);
+    gkForm.addEventListener("submit", confirmGoalkeepers);
+    btnCancelGK.addEventListener("click", closeGkDialog);
 }
 
 
 function createTeams() {
     const checkedBox = rosterList.querySelectorAll("input:checked");
-    
-    const checkedBoxes  = [...checkedBox];
+
+    const checkedBoxes = [...checkedBox];
     //işaretli checkbox'ları oyuncu nesnelerine çevir
-    
+
     /**
      * map her checkbox için fonksiyonu bir kere çalıştırır 
      * ve fonksiyonun return ettiği değerlerden yeni bir dizi oluşturur. 
@@ -61,23 +71,26 @@ function createTeams() {
      * return’ü unutursan dizi 12 tane undefined ile dolar.
      */
     matchPlayers = checkedBoxes.map(function (checkbox) {
-    const rosterLi = checkbox.closest(".roster-item");               //1) satırına çık
-    const playerId = Number(rosterLi.dataset.id);                    //2) id'yi sayı olarak oku
-    return players.find(player => player.id === playerId);           //3) oyuncuyu bul ve döndür
-});
- 
+        const rosterLi = checkbox.closest(".roster-item");               //1) satırına çık
+        const playerId = Number(rosterLi.dataset.id);                    //2) id'yi sayı olarak oku
+        return players.find(player => player.id === playerId);           //3) oyuncuyu bul ve döndür
+    });
+
     const goalkeepers = matchPlayers.filter((player) => player.position === "GK");
     console.log(goalkeepers);
-    
+
     if (goalkeepers.length === 2) {
-        buildTeams(goalkeepers,matchPlayers);
+        buildTeams(goalkeepers);
     }
-    
+    else{
+        openGkDialog(goalkeepers);
+    }
+
 }
 
 //SEKME TIKLAMASI: sadece tıklamayı karşılar, ekranı showResults günceller
 function snakeOrBest(e) {
-    
+
     const tab = e.target.closest(".algo-tab");
     if (!tab) {
         return;   //sekmelerin arasındaki boşluğa tıklandı
@@ -90,7 +103,7 @@ function snakeOrBest(e) {
 }
 
 function buildTeams(goalkeepers) {
-    const teamBuilder = new TeamBuilder(matchPlayers,goalkeepers); //jste ctora verılen parametre sıraları onemlı
+    const teamBuilder = new TeamBuilder(matchPlayers, goalkeepers); //jste ctora verılen parametre sıraları onemlı
     const best = teamBuilder.buildBestOfAll();
     const snake = teamBuilder.buildSnakeDraft();
     // [snakeTeam1,snakeTeam2]= snake;
@@ -100,11 +113,11 @@ function buildTeams(goalkeepers) {
      * Anahtar yoksa oluşturuyor, varsa üzerine yazıyor. 
      * Kullanıcı “Takımları kur”a ikinci kez bastığında eski sonuçlar yenileriyle değişir.
      */
-    
-    results.snake = best;
-    results.best = snake;
+
+    results.snake = snake;
+    results.best = best;
     fillCompareTable();
-    showResults(); 
+    showResults();
 }
 
 
@@ -123,14 +136,14 @@ function buildTeams(goalkeepers) {
 //let ile tanımlı id değişkeninde veri varsa guncelleme kısmı calısacak
 function editPlayer(e) {
     const editButton = e.target.closest(".btn-edit");
-    if(editButton){
+    if (editButton) {
         const rosterLi = editButton.closest(".roster-item");
         const selectedPlayer = players.find((player) => player.id === Number(rosterLi.dataset.id));
         nameInput.value = selectedPlayer.name;
         selectPosition.value = selectedPlayer.position;
         ratingOutput.value = selectedPlayer.rating;
         ratingInput.value = selectedPlayer.rating;
-        
+
         selectedPlayerId = selectedPlayer.id;
         playerForm.classList.add("is-editing");
         btnSavePlyr.textContent = "Kaydet";
@@ -142,7 +155,7 @@ function editPlayer(e) {
 function removePlayer(e) {
     const deleteButton = e.target.closest(".btn-delete");
     if (deleteButton) {
-        
+
         const rosterLi = deleteButton.closest(".roster-item");
         /**
          * “Düzenlerken aynı oyuncu silinirse” durumu henüz ele alınmamış. 
@@ -162,39 +175,39 @@ function removePlayer(e) {
     }
 }
 function removePlayerStorage(playerId) {
-    const index = players.findIndex(function(player) {
+    const index = players.findIndex(function (player) {
         return player.id === playerId;
     });
 
-    if(index !== -1){
-        
-        players.splice(index,1)
+    if (index !== -1) {
+
+        players.splice(index, 1)
         savePlayers(players);
     }
 
 }
 // Oyuncu Ekleme Kısmı UI / STORAGE /
-function addPlayer(e){
-    
+function addPlayer(e) {
+
     e.preventDefault(); //Submit farklı bir sayfaya yönlendirmesin diye yaptık. En başa aldık, aşağıda hata olsa bile sayfa yenilenmesin
     const inputText = nameInput.value.trim();
-    const playerPosition= selectPosition.value;
-    const playerRating = Number(ratingInput.value); 
-    
-    if (inputText===""){
+    const playerPosition = selectPosition.value;
+    const playerRating = Number(ratingInput.value);
+
+    if (inputText === "") {
         alert("Oyuncu bilgilerini eksiksiz doldurun");
         return;
     }
 
 
-    if(selectedPlayerId!==null){
-        
+    if (selectedPlayerId !== null) {
+
         //storage guncelleme
-    
+
         const selectedPlayer = players.find((player) => player.id === selectedPlayerId);
         selectedPlayer.name = inputText;
-        selectedPlayer.position= playerPosition;
-        selectedPlayer.rating = playerRating; 
+        selectedPlayer.position = playerPosition;
+        selectedPlayer.rating = playerRating;
         savePlayers(players);
 
 
@@ -213,8 +226,8 @@ function addPlayer(e){
     }
 
 
-    else{
-        const newPlayer = new Player(Date.now(),inputText,playerPosition,playerRating);
+    else {
+        const newPlayer = new Player(Date.now(), inputText, playerPosition, playerRating);
         //Storage ekleme
         players.push(newPlayer);
         savePlayers(players);
@@ -224,22 +237,22 @@ function addPlayer(e){
         updateSelectionUI();
     }
     resetForm();
-    
+
 }
 
 function addRosterHTMLElement(player) {
-//     <li class="roster-item" data-id="3">
-//                     <label class="pick">
-//                         <input type="checkbox" checked>
-//                         <span class="pos" data-pos="GK">KL</span>
-//                         <span class="pick-name">Tolga</span>
-//                         <span class="pick-rating">6</span>
-//                     </label>
-//                     <button type="button" class="icon-btn btn-edit" aria-label="Tolga'yı düzenle"><i class="fa-solid fa-pen"></i></button>
-//                     <button type="button" class="icon-btn btn-delete" aria-label="Tolga'yı sil"><i class="fa-solid fa-trash-can"></i></button>
-//    </li>
+    //     <li class="roster-item" data-id="3">
+    //                     <label class="pick">
+    //                         <input type="checkbox" checked>
+    //                         <span class="pos" data-pos="GK">KL</span>
+    //                         <span class="pick-name">Tolga</span>
+    //                         <span class="pick-rating">6</span>
+    //                     </label>
+    //                     <button type="button" class="icon-btn btn-edit" aria-label="Tolga'yı düzenle"><i class="fa-solid fa-pen"></i></button>
+    //                     <button type="button" class="icon-btn btn-delete" aria-label="Tolga'yı sil"><i class="fa-solid fa-trash-can"></i></button>
+    //    </li>
 
-   
+
     const li = document.createElement("li");
     li.className = "roster-item";
     li.dataset.id = player.id;
@@ -247,31 +260,28 @@ function addRosterHTMLElement(player) {
     label.className = "pick";
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
-    const spanPosition = document.createElement("span");
-    spanPosition.className = "pos";
-    spanPosition.dataset.pos = player.position;
-    spanPosition.textContent = POSITION_LABELS[player.position];
+    const spanPosition = createPositionBadge(player.position);
     const spanName = document.createElement("span");
     spanName.className = "pick-name";
     spanName.textContent = player.name;
     const spanRating = document.createElement("span");
     spanRating.className = "pick-rating";
     spanRating.textContent = player.rating;
-    const editButton  = document.createElement("button");
+    const editButton = document.createElement("button");
     editButton.type = "button";
     editButton.className = "icon-btn btn-edit";
-    editButton.ariaLabel=`${player.name} kişisini düzenle`;
+    editButton.ariaLabel = `${player.name} kişisini düzenle`;
     const iEdit = document.createElement("i");
     iEdit.className = "fa-solid fa-pen";
-    const clearButton  = document.createElement("button");
+    const clearButton = document.createElement("button");
     clearButton.type = "button";
     clearButton.className = "icon-btn btn-delete";
-    clearButton.ariaLabel=`${player.name} kişisini sil`;
+    clearButton.ariaLabel = `${player.name} kişisini sil`;
     const iClear = document.createElement("i");
     iClear.className = "fa-solid fa-trash-can";
     editButton.appendChild(iEdit);
     clearButton.appendChild(iClear);
-    label.appendChild(checkbox); 
+    label.appendChild(checkbox);
     label.appendChild(spanPosition);
     label.appendChild(spanName);
     label.appendChild(spanRating);
@@ -288,7 +298,7 @@ function addRosterHTMLElement(player) {
 function updateSelectionUI() {
     //işaretli checkbox sayısı
     const selectedCount = rosterList.querySelectorAll("input:checked").length;
-    
+
     //sayaç: "9 / 12 seçildi"
     selectedCountEl.innerHTML = `<strong>${selectedCount}</strong> / ${MATCH_SIZE} seçildi`;
     selectedCountEl.classList.toggle("is-ready", selectedCount === MATCH_SIZE);
@@ -310,7 +320,7 @@ function showRosterUI() {
     rosterList.innerHTML = ""; //HTML'deki örnek oyuncuları temizle
     players.forEach(player => addRosterHTMLElement(player));
     updateSelectionUI();   //başlangıç durumu: "0 / 12 seçildi"
-    
+
 }
 
 //EKRANI GÜNCELLER: e almaz, hem buildTeams'ten hem sekmeden çağrılır
@@ -340,8 +350,8 @@ function showResults() {
     drawTeam(teamB, "B");
     totalA.textContent = teamA.totalRating; // getter parantezsiz
     totalB.textContent = teamB.totalRating; // getter parantezsiz
-    resultsSection.hidden = false; 
-    
+    resultsSection.hidden = false;
+
 }
 
 //Yardımcı Fonksiyonlar
@@ -360,7 +370,7 @@ function resetForm() {
 
 //item => { player, slot }
 function createChipItem(item) {
-    const {player, slot, ...otherInfos} = item;
+    const { player, slot, ...otherInfos } = item;
     const div = document.createElement("div");
     div.className = "chip";
     const spanRating = document.createElement("span");
@@ -369,15 +379,17 @@ function createChipItem(item) {
     spanRating.textContent = player.rating;
     spanName.className = "chip-name";
     spanName.textContent = player.name;
-    if(player.position !== slot){
+    
+    div.appendChild(spanRating);
+    div.appendChild(spanName);
+
+    if (player.position !== slot) {
         div.classList.add("is-out");
         const spanChipNote = document.createElement("span");
         spanChipNote.className = "chip-note"
         spanChipNote.textContent = `${POSITION_LABELS[player.position]}→${POSITION_LABELS[slot]}`;
         div.appendChild(spanChipNote);
     }
-    div.appendChild(spanRating);
-    div.appendChild(spanName);
     return div;
 }
 
@@ -422,4 +434,93 @@ function fillCompareTable() {
     snakeOutCell.classList.toggle("is-better", snakeOut < bestOut);
     bestOutCell.classList.toggle("is-better", bestOut < snakeOut);
 
+}
+
+function openGkDialog(goalkeepers) {
+    let candidates;
+    if (goalkeepers.length<2) {
+        gkNeeded = 2 - goalkeepers.length;
+        gkFixed = goalkeepers;
+        candidates = matchPlayers.filter(player => player.position !== "GK");
+        gkTitle.textContent = "Kaleye kim geçecek?";
+         if (goalkeepers.length === 0) {
+            gkText.textContent = "Gelenler arasında kaleci yok. 2 oyuncu seç.";
+        } else {
+            gkText.textContent = `Sadece 1 kaleci var (${goalkeepers[0].name}). 1 oyuncu daha seç.`;
+        }
+    }
+    else {
+        //FAZLA: kalecilerden hangi ikisinin kalede oynayacağı seçilecek
+        gkNeeded = 2;
+        gkFixed = [];                        //kimse kesin değil, ikisi de seçimden gelecek
+        candidates = goalkeepers;
+
+        gkTitle.textContent = "Hangi ikisi kalede?";
+        gkText.textContent = `${goalkeepers.length} kaleci var. Kalede oynayacak 2'sini seç, diğerleri sahada oynar.`;
+    }
+    //iki durumda da aynı: eski seçenekleri temizle, yenilerini ekle, aç
+    gkOptions.innerHTML = "";   //yoksa her açılışta liste uzar
+    candidates.forEach(player => addGkOption(player));
+
+    gkDialog.showModal();
+}
+
+//mevki rozeti: <span class="pos" data-pos="DEF">DF</span>
+//hem kadroda hem kaleci dialog'unda kullanılıyor -> üretir ve döndürür, eklemez
+function createPositionBadge(position) {
+    const badge = document.createElement("span");
+    badge.className = "pos";
+    badge.dataset.pos = position;                     //rengi belirleyen: "DEF"
+    badge.textContent = POSITION_LABELS[position];    //ekranda görünen: "DF"
+    return badge;
+}
+
+//<li><label><input type="checkbox" value="9"> Arda <span class="pos" data-pos="MID">OS</span></label></li>
+function addGkOption(player) {
+    const li = document.createElement("li");
+    const label = document.createElement("label");
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = player.id;   //string olarak saklanır -> onayda Number(checkbox.value)
+
+    //append: hem eleman hem string alır, birden fazla parametreyi sırayla ekler
+    //player.name bir string -> tarayıcı onu metin düğümü (text node) olarak ekler
+    label.append(checkbox, player.name, createPositionBadge(player.position));
+
+    li.appendChild(label);
+    gkOptions.appendChild(li);
+}
+
+//ONAY: form method="dialog" olduğu için submit olunca dialog kendiliğinden kapanır
+//seçim yanlışsa preventDefault ile kapanmayı durduruyoruz
+function confirmGoalkeepers(e) {
+    const checkedBoxes = [...gkOptions.querySelectorAll("input:checked")];
+
+    //1) sayı kontrolü: tam gkNeeded kadar seçilmeli
+    if (checkedBoxes.length !== gkNeeded) {
+        e.preventDefault();   //dialog açık kalsın
+        gkText.textContent = `Tam ${gkNeeded} oyuncu seçmelisin. Şu an ${checkedBoxes.length} seçili.`;
+        return;
+    }
+
+    //2) checkbox -> oyuncu: value string olduğu için Number
+    const chosen = checkedBoxes.map(function (checkbox) {
+        const playerId = Number(checkbox.value);
+        return matchPlayers.find(player => player.id === playerId);
+    });
+
+    //3) kesin olanlar + seçilenler
+    //eksik durumu: [Emre] + [Can] -> 2 kişi
+    //fazla durumu: [] + [Emre, Tolga] -> 2 kişi
+    const finalGoalkeepers = [...gkFixed, ...chosen];
+
+    //4) preventDefault yok -> dialog kendisi kapanır
+    buildTeams(finalGoalkeepers);
+}
+
+
+//VAZGEÇ: type="button" olduğu için formu submit etmez, kapatmayı biz yapıyoruz
+function closeGkDialog() {
+    gkDialog.close();
 }
